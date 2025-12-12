@@ -88,9 +88,12 @@ This module ensures:
 - Full rollback on payment failures  
 
 Additional contributors may append their modules and names below as the project expands.
+---
+---
+---
 
 # 🛒 E-Commerce Frontend – React
-### Developed by: **Manish Joshi**
+### Developed by: **Abhijeet Raj**
 
 A sleek, modern e-commerce application built with React and Vite, featuring a complete shopping experience with product catalog, cart management, user authentication, and responsive design.
 ---
