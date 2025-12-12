@@ -416,44 +416,43 @@ Supported statuses: `Pending`, `Processing`, `Out for Delivery`, `Delivered`, `C
 
 ---
 
+## 📁 Project Structure (Backend)
+
+```
+
 /src
-│
 ├── models/
-│ ├── usermodel.js
-│ ├── otpmodel.js
-│ ├── productmodel.js
-│ ├── cartmodel.js
-│ ├── addressmodel.js
-│ └── ordermodel.js
-│
+│   ├── usermodel.js
+│   ├── otpmodel.js
+│   ├── productmodel.js
+│   ├── cartmodel.js
+│   ├── addressmodel.js
+│   └── ordermodel.js
 ├── routes/
-│ ├── product.routes.js
-│ ├── cart.route.js
-│ ├── address.route.js
-│ ├── auth.route.js
-│ ├── adminorder.route.js
-│ └── order.routes.js
-│
+│   ├── product.routes.js
+│   ├── cart.route.js
+│   ├── address.route.js
+│   ├── auth.route.js
+│   ├── adminorder.route.js
+│   └── order.routes.js
 ├── controllers/
-│ ├── product.controller.js
-│ ├── cart.controller.js
-│ ├── address.controller.js
-│ ├── auth.controller.js
-│ ├── adminorder.controller.js
-│ └── order.controller.js
-│
+│   ├── product.controller.js
+│   ├── cart.controller.js
+│   ├── address.controller.js
+│   ├── auth.controller.js
+│   ├── adminorder.controller.js
+│   └── order.controller.js
 ├── middlewares/
-│ ├── auth.js
-│ └── multer.js
-│
+│   ├── auth.js
+│   └── multer.js
 ├── config/
-│ ├── cloudinary.js
-│ └── redisClient.js
-│
+│   ├── cloudinary.js
+│   └── redisClient.js
 ├── utils/
-│ └── sendEmail.js
-│
+│   └── sendEmail.js
 └── index.js
+
+```
 
 
 ## 📄 Summary
