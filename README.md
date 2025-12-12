@@ -388,13 +388,13 @@ This project provides a solid foundation for an e-commerce platform with all cor
 
 ---
 
-### **Admin Order Management Endpoints** (`/api.admin`)
+### **Admin Order Management Endpoints** (`/api/admin`)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api.admin/order` | Get all orders (Admin) |
-| PUT | `/api.admin/status/:orderId` | Update order status |
+| GET | `/api/admin/order` | Get all orders (Admin) |
+| PUT | `/api/admin/status/:orderId` | Update order status |
 
-Supported statuses: `Pending`, `In Process`, `Out for Delivery`, `Delivered`, `Cancelled`
+Supported statuses: `Pending`, `Processing`, `Out for Delivery`, `Delivered`, `Cancelled`, `Other`
 
 ---
 
@@ -404,15 +404,6 @@ Supported statuses: `Pending`, `In Process`, `Out for Delivery`, `Delivered`, `C
 | POST | `/api/order/create` | Place order from cart |
 | GET | `/api/order/myorders` | Get all orders for logged-in user |
 
----
-
-### **Auth / OTP Endpoints** (Not implemented yet)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/signup` | User signup |
-| POST | `/api/auth/login` | User login |
-| POST | `/api/auth/send-otp` | Send OTP email |
-| POST | `/api/auth/verify-otp` | Verify OTP |
 
 ---
 
@@ -426,7 +417,8 @@ Supported statuses: `Pending`, `In Process`, `Out for Delivery`, `Delivered`, `C
 ---
 
 /src
-│── models/
+│
+├── models/
 │ ├── usermodel.js
 │ ├── otpmodel.js
 │ ├── productmodel.js
@@ -434,39 +426,34 @@ Supported statuses: `Pending`, `In Process`, `Out for Delivery`, `Delivered`, `C
 │ ├── addressmodel.js
 │ └── ordermodel.js
 │
-│── routes/
+├── routes/
 │ ├── product.routes.js
 │ ├── cart.route.js
 │ ├── address.route.js
 │ ├── auth.route.js
 │ ├── adminorder.route.js
 │ └── order.routes.js
-|
 │
-│── controllers/
+├── controllers/
 │ ├── product.controller.js
 │ ├── cart.controller.js
 │ ├── address.controller.js
 │ ├── auth.controller.js
 │ ├── adminorder.controller.js
 │ └── order.controller.js
-|
-|
-│── middlewares/
+│
+├── middlewares/
 │ ├── auth.js
 │ └── multer.js
-|
-|
-│── config/
+│
+├── config/
 │ ├── cloudinary.js
 │ └── redisClient.js
-|
-|
-│── utils/
-| └── sendEmail.js
-|
-│── index.js
-
+│
+├── utils/
+│ └── sendEmail.js
+│
+└── index.js
 
 
 ## 📄 Summary
