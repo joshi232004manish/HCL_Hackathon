@@ -5,7 +5,9 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import orderRouter from './routes/order.routes.js'
 import AuthRouter from './routes/auth.routes.js';
-
+import cartRoutes from './routes/cart.router.js';
+import updateaddress from './routes/address.route.js';
+import orderRouterAdmin from './routes/adminorder.route.js';
 
 dotenv.config();
 
@@ -45,8 +47,9 @@ app.get('/api/health', (req, res) => {
 app.use('/api/orders',orderRouter);
 app.use('/api/auth',AuthRouter);
 
-
-
+app.use('/api',updateaddress)
+app.use('/api/cart', cartRoutes);
+app.use("/api/admin", orderRouterAdmin);
 
 
 app.listen(port, () => {

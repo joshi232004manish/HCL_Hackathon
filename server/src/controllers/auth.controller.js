@@ -1,22 +1,19 @@
-import Admin from "../models/usermodel.js";
+import User from "../models/usermodel.js";
 import Order from "../models/ordermodel.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import Contact from "../models/contactmodel.js";
 import sendEmailWithCode from "../utils/sendEmail.js";
 import Otp from "../models/otpmodel.js";
-import redisClient from "../../config/redisClient.js";
-import { randomUUID } from "crypto";
-
 
 const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET || "dev_access_secret";
 const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || "dev_refresh_secret";
 
-const generateAccessToken = (admin) =>
-  jwt.sign({ id: admin.id }, ACCESS_SECRET, { expiresIn: "15m" });
-4
-const generateRefreshToken = (admin) =>
-  jwt.sign({ id: admin.id }, REFRESH_SECRET, { expiresIn: "7d" });
+const generateAccessToken = (User) =>
+  jwt.sign({ id: User.id }, ACCESS_SECRET, { expiresIn: "15m" });
+
+const generateRefreshToken = (User) =>
+  jwt.sign({ id: User.id }, REFRESH_SECRET, { expiresIn: "7d" });
 
 const isProd = process.env.NODE_ENV === "production";
 const accessCookieOptions = {
@@ -34,423 +31,219 @@ const refreshCookieOptions = {
   path: "/",
 };
 
-const REFRESH_TTL = 7 * 24 * 60 * 60;
-const tokenSetKey = (userId) => `userTokens:${userId}`;
-const tokenKey = (userId, tokenId) => `refresh:${userId}:${tokenId}`;
-const otpKey = (email) => `otp:${email}`;
-
-const addRefreshToken = async (userId, token) => {
-  const id = randomUUID();
-  await redisClient.sadd(tokenSetKey(userId), id);
-  await redisClient.expire(tokenSetKey(userId), REFRESH_TTL);
-  await redisClient.set(tokenKey(userId, id), token, { EX: REFRESH_TTL });
-  return id;
-};
-
-
-const removeRefreshToken = async (userId, tokenId) => {
-  await redisClient.srem(tokenSetKey(userId), tokenId);
-  await redisClient.del(tokenKey(userId, tokenId));
-};
-
-const hasRefreshToken = async (userId, token, tokenId) => {
-  const isMember = await redisClient.sismember(tokenSetKey(userId), tokenId);
-  if (!(isMember === 1 || isMember === true)) return false;
-  const val = await redisClient.get(tokenKey(userId, tokenId));
-  return val === token;
-};
-
-
-const blacklistToken = async (token, id) => {
-  if (!token) return;
-  const decoded = jwt.decode(token);
-  if (!decoded?.exp) return;
-
-  const ttl = decoded.exp - Math.floor(Date.now() / 1000);
-  if (ttl > 0) {
-    await redisClient.set(`blacklist:${token}`, "true", { EX: ttl }); // 7 days
-  }
-};
-
-
-
-// ========================= SIGNUP (OTP Step 1) =========================
+// ========================= SIGNUP - SEND OTP =========================
 const signup = async (req, res) => {
   const { username, email, password } = req.body;
-  try {
-    let existingUser = await Admin.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists." });
-    }
 
-    const verificationCode = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
-    const otpRecord = new Otp({
+  try {
+    let exist = await User.findOne({ email });
+    if (exist) return res.status(400).json({ message: "User already exists" });
+
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await Otp.deleteMany({ email });
+
+    await Otp.create({
       email,
-      otp: verificationCode,
+      otp: otpCode,
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
       verified: false,
     });
 
-    await otpRecord.save();
-    // await redisClient.set(otpKey(email), verificationCode, { EX: 10 * 60 });
-    await sendEmailWithCode(email, verificationCode);
-    return res
-      .status(200)
-      .json({ message: "Verification code sent to your email." });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error during signup." });
-  }
-};
+    await sendEmailWithCode(email, otpCode);
+    
 
-// ========================= VERIFY EMAIL & CREATE ADMIN (OTP Step 2) =========================
-const verifyEmail = async (req, res) => {
-  const { email, username, code, password } = req.body;
-  try {
-    if (!email || !username || !code || !password) {
-      return res.status(400).json({ message: "All fields are required." });
-    }
-
-    const storedCode = await redisClient.get(otpKey(email));
-    if (!storedCode)
-      return res.status(400).json({ message: "No OTP found for this email." });
-    if (storedCode !== code)
-      return res.status(400).json({ message: "Invalid OTP." });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new Admin({
-      username,
-      email,
-      password: hashedPassword,
-      isadmin: false,
-    });
-
-    await newUser.save();
-
-    const accessToken = generateAccessToken(newUser);
-    const refreshToken = generateRefreshToken(newUser);
-    const refreshId = await addRefreshToken(newUser.id, refreshToken);
-    await redisClient.del(otpKey(email));
-
-    res.cookie("access_token", accessToken, accessCookieOptions);
-    res.cookie("refresh_token", refreshToken, refreshCookieOptions);
-    res.cookie("refresh_id", refreshId, refreshCookieOptions);
-
-    res.json({
-      message: "Signup successful",
-      username: newUser.username,
-      email: newUser.email,
-      isadmin: newUser.isadmin,
+    return res.status(200).json({
+      message: "OTP sent successfully",
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error verifying email." });
+    res.status(500).json({ message: "Signup error" });
+  }
+};
+
+// ========================= VERIFY EMAIL & CREATE USER =========================
+const verifyEmail = async (req, res) => {
+  const { email, username, code, password } = req.body;
+
+  try {
+    const otpRecord = await Otp.findOne({ email });
+
+    if (!otpRecord) return res.status(400).json({ message: "OTP expired" });
+    if (otpRecord.otp !== code) return res.status(400).json({ message: "Invalid OTP" });
+
+    await Otp.deleteMany({ email });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await User.create({
+      username,
+      email,
+      password: hashedPassword,
+      isUser: false,
+    });
+
+    const accessToken = generateAccessToken(newUser);
+    const refreshToken = generateRefreshToken(newUser);
+
+    res.cookie("access_token", accessToken, accessCookieOptions);
+    res.cookie("refresh_token", refreshToken, refreshCookieOptions);
+
+    return res.json({
+      message: "Signup successful",
+      username: newUser.username,
+      email: newUser.email,
+      isUser: newUser.isUser,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Verification failed" });
   }
 };
 
 // ========================= LOGIN =========================
 const login = async (req, res) => {
   const { email, password } = req.body;
-  console.log("Login attempt for email:", email);
-  const admin = await Admin.findOne({ email });
-  if (!admin) return res.status(400).json({ msg: "Invalid credentials" });
 
-  const isMatch = await bcrypt.compare(password, admin.password);
-  if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
-  console.log("Admin logged in:", admin.id);
-  const accessToken = generateAccessToken(admin);
-  const refreshToken = generateRefreshToken(admin);
+  const found = await User.findOne({ email });
+  if (!found) return res.status(400).json({ message: "Invalid credentials" });
 
-  const refreshId = await addRefreshToken(admin.id, refreshToken);
+  const valid = await bcrypt.compare(password, found.password);
+  if (!valid) return res.status(400).json({ message: "Invalid credentials" });
+
+  const accessToken = generateAccessToken(found);
+  const refreshToken = generateRefreshToken(found);
 
   res.cookie("access_token", accessToken, accessCookieOptions);
   res.cookie("refresh_token", refreshToken, refreshCookieOptions);
-  res.cookie("refresh_id", refreshId, refreshCookieOptions);
 
   res.json({
     message: "Logged in",
-    username: admin.username,
-    email: admin.email,
-    isadmin: admin.isadmin,
+    username: found.username,
+    email: found.email,
+    isUser: found.isUser,
   });
 };
 
 // ========================= GOOGLE LOGIN =========================
 const google = async (req, res) => {
   try {
-    const validUser = await Admin.findOne({ email: req.body.email });
+    const existing = await User.findOne({ email: req.body.email });
 
-    if (validUser) {
-      const { password: pass, ...rest } = validUser._doc;
-      const accessToken = generateAccessToken(validUser);
-      const refreshToken = generateRefreshToken(validUser);
-
-      const refreshId = await addRefreshToken(validUser.id, refreshToken);
+    if (existing) {
+      const accessToken = generateAccessToken(existing);
+      const refreshToken = generateRefreshToken(existing);
 
       res.cookie("access_token", accessToken, accessCookieOptions);
       res.cookie("refresh_token", refreshToken, refreshCookieOptions);
-      res.cookie("refresh_id", refreshId, refreshCookieOptions);
 
-      return res.json(rest);
+      return res.json({
+        username: existing.username,
+        email: existing.email,
+        isUser: existing.isUser,
+      });
     }
 
-    const generatedPassword =
+    const randomPass =
       Math.random().toString(36).slice(-8) +
       Math.random().toString(36).slice(-8);
-    const hashedPassword = bcrypt.hashSync(generatedPassword, 10);
 
-    const newUser = new Admin({
+    const hashed = bcrypt.hashSync(randomPass, 10);
+
+    const newUser = await User.create({
       username:
         req.body.name.split(" ").join("").toLowerCase() +
         Math.random().toString(36).slice(-4),
       email: req.body.email,
-      password: hashedPassword,
-      isadmin: false,
+      password: hashed,
+      isUser: false,
     });
-
-    await newUser.save();
-    const { password: pass, ...rest } = newUser._doc;
 
     const accessToken = generateAccessToken(newUser);
     const refreshToken = generateRefreshToken(newUser);
 
-    const refreshId = await addRefreshToken(newUser.id, refreshToken);
-
     res.cookie("access_token", accessToken, accessCookieOptions);
     res.cookie("refresh_token", refreshToken, refreshCookieOptions);
-    res.cookie("refresh_id", refreshId, refreshCookieOptions);
 
     res.json({
-      username: rest.username,
-      email: rest.email,
-      isadmin: rest.isadmin,
+      username: newUser.username,
+      email: newUser.email,
+      isUser: newUser.isUser,
     });
-  } catch (error) {
-    console.error("Google authentication error:", error);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Google login failed" });
   }
 };
 
 // ========================= LOGOUT =========================
-
-const logOutAllDevices = async (req, res) => {
-  try {
-    const userId = req.user; // assume user is authenticated and req.user contains userId
-    const now = Math.floor(Date.now() / 1000); // current time in seconds
-    const accessToken = req.cookies.access_token;
-    const refreshToken = req.cookies.refresh_token;
-    const refreshId = req.cookies.refresh_id;
-    // Save blacklist timestamp for user
-    await redisClient.set(`blacklist:user:${userId}`, now.toString());
-    const ids = await redisClient.smembers(tokenSetKey(userId));
-    if (ids.length) {
-      const keys = ids.map((id) => tokenKey(userId, id));
-      await redisClient.del(...keys);
-      await redisClient.del(tokenSetKey(userId));
-    }
-
-    // Clear cookies
-    res.clearCookie("access_token", { ...accessCookieOptions, maxAge: 0 });
-    res.clearCookie("refresh_token", { ...refreshCookieOptions, maxAge: 0 });
-
-    res.json({ message: "Logged out from all devices" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Logout failed" });
-  }
-};
-
 const logOut = async (req, res) => {
-  try {
-    const accessToken = req.cookies.access_token;
-    const refreshToken = req.cookies.refresh_token;
-    const refreshId = req.cookies.refresh_id;
+  res.clearCookie("access_token", { ...accessCookieOptions, maxAge: 0 });
+  res.clearCookie("refresh_token", { ...refreshCookieOptions, maxAge: 0 });
 
-    // await blacklistToken(accessToken);
-
-    if (refreshToken) {
-      try {
-        const decoded = jwt.verify(
-          refreshToken,
-          process.env.REFRESH_TOKEN_SECRET
-        );
-        if (refreshId) {
-          await removeRefreshToken(decoded.id, refreshId);
-        }
-      } catch (err) {
-        console.error("Invalid refresh token on logout:", err.message);
-      }
-    }
-
-    res.clearCookie("access_token", { ...accessCookieOptions, maxAge: 0 });
-    res.clearCookie("refresh_token", { ...refreshCookieOptions, maxAge: 0 });
-
-    res.json({ message: "Logged out" });
-  } catch (error) {
-    console.error("Error during logout:", error);
-  }
+  res.json({ message: "Logged out" });
 };
 
-// ========================= REFRESH TOKEN =========================
-const refreshAccessToken = async (req, res) => {
-  const refreshToken = req.cookies.refresh_token;
-  const refreshId = req.cookies.refresh_id;
-  if (!refreshToken)
+// ========================= REFRESH ACCESS TOKEN =========================
+const refreshAccessToken = (req, res) => {
+  const token = req.cookies.refresh_token;
+  if (!token)
     return res.status(403).json({ message: "No refresh token" });
 
-  // const blacklisted = await isTokenBlacklisted(refreshToken);
-  // if (blacklisted) return res.status(403).json({ message: "Refresh token revoked" });
-
   try {
-    const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
-    const valid = refreshId && (await hasRefreshToken(decoded.id, refreshToken, refreshId));
-
-    if (!valid) {
-      return res.status(403).json({ message: "Invalid refresh token" });
-    }
-
+    const decoded = jwt.verify(token, REFRESH_SECRET);
     const newAccessToken = generateAccessToken({ id: decoded.id });
-    // const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    req.user = decoded.id;
-    // Check blacklist
-    const blacklistTimestampStr = await redisClient.get(
-      `blacklist:user:${decoded.id}`
-    );
-    if (blacklistTimestampStr) {
-      const blacklistTimestamp = parseInt(blacklistTimestampStr, 10);
 
-      // Token issued before blacklist time → invalid
-      if (decoded.iat < blacklistTimestamp) {
-        res.cookie("access_token", "", {
-          httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          maxAge: 0, // expire immediately
-        });
-
-        res.cookie("refresh_token", "", {
-          httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          maxAge: 0,
-        });
-
-        return res
-          .status(401)
-          .json({ message: "Session expired", forceLogout: true });
-      }
-    }
     res.cookie("access_token", newAccessToken, accessCookieOptions);
-
-    res.json({ message: "Access token refreshed" });
+    res.json({ message: "Token refreshed" });
   } catch (err) {
     res.status(403).json({ message: "Invalid refresh token" });
   }
 };
 
-// ========================= PROTECTED PROFILE =========================
+// ========================= PROFILE =========================
 const profile = async (req, res) => {
-  try {
-    const user = await Admin.findById(req.user);
-    console.log(user);
-    if (!user) return res.status(404).json({ message: "Admin not found" });
+  const user = await User.findById(req.user);
+  if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json({
-      username: user.username,
-      email: user.email,
-      isadmin: user.isadmin,
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
+  res.json({
+    username: user.username,
+    email: user.email,
+    isUser: user.isUser,
+  });
 };
 
-// ========================= OTHER ADMIN FUNCTIONS =========================
+// ========================= OTHER FUNCTIONS =========================
 const getOrders = async (req, res) => {
-  const orders = await Order.find().sort({ createdAt: -1 });
-  res.status(201).json(orders);
+  const o = await Order.find().sort({ createdAt: -1 });
+  res.json(o);
 };
 
 const updateOrderStatus = async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  await Order.findByIdAndUpdate(id, { status });
+  await Order.findByIdAndUpdate(req.params.id, { status: req.body.status });
   res.json({ msg: "Status updated" });
 };
 
 const getOrderStats = async (req, res) => {
-  const pipeline = [{ $group: { _id: "$status", count: { $sum: 1 } } }];
-  const stats = await Order.aggregate(pipeline);
+  const stats = await Order.aggregate([
+    { $group: { _id: "$status", count: { $sum: 1 } } },
+  ]);
   res.json(stats);
 };
 
 const saveContact = async (req, res) => {
-  const { email, name, mobile, message } = req.body;
   try {
-    const newContact = new Contact({ email, name, mobile, message });
-    await newContact.save();
+    await Contact.create(req.body);
     res.status(201).json("Contact saved successfully");
-  } catch (error) {
-    console.log("Error saving contact:", error);
-    res.status(401).json("Error saving contact");
+  } catch (err) {
+    console.error(err);
+    res.status(400).json("Saving failed");
   }
 };
 
-const grantAdminAccess = async (req, res, next) => {
-  const { email } = req.body;
-  try {
-    const requestingUser = await Admin.findById(req.user);
-    if (!requestingUser || !requestingUser.isadmin) {
-      return res
-        .status(403)
-        .json({ message: "Only admins can grant admin access." });
-    }
-    const user = await Admin.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.isadmin = true;
-    await user.save();
-
-    res.status(200).json({ message: `${email} is now an admin.` });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const revokeAdminAccess = async (req, res, next) => {
-  const { email } = req.body;
-  try {
-    const requestingUser = await Admin.findById(req.user);
-    if (!requestingUser || !requestingUser.isadmin) {
-      return res
-        .status(403)
-        .json({ message: "Only admins can revoke admin access." });
-    }
-    const user = await Admin.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.isadmin = false;
-    await user.save();
-
-    res.status(200).json({ message: `${email} is no longer an admin.` });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const listAllUsers = async (req, res, next) => {
-  try {
-    const requestingUser = await Admin.findById(req.user);
-    if (!requestingUser || !requestingUser.isadmin) {
-      return res.status(403).json({ message: "Only admins can view users." });
-    }
-    const users = await Admin.find({}, "username email isadmin");
-    res.status(200).json(users);
-  } catch (error) {
-    next(error);
-  }
+const listAllUsers = async (req, res) => {
+  const users = await User.find({}, "username email isUser");
+  res.json(users);
 };
 
 // ========================= EXPORTS =========================
@@ -463,11 +256,8 @@ export default {
   refreshAccessToken,
   profile,
   getOrders,
-  logOutAllDevices,
   updateOrderStatus,
   getOrderStats,
   saveContact,
-  grantAdminAccess,
-  revokeAdminAccess,
   listAllUsers,
 };
