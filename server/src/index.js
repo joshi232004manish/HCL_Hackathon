@@ -8,7 +8,7 @@ import AuthRouter from './routes/auth.routes.js';
 import cartRoutes from './routes/cart.router.js';
 import updateaddress from './routes/address.route.js';
 import orderRouterAdmin from './routes/adminorder.route.js';
-
+import productRouter from './routes/product.route.js';
 dotenv.config();
 
 
@@ -43,7 +43,7 @@ app.get('/api/health', (req, res) => {
 
 
 
-
+app.use('/api/product',productRouter);
 app.use('/api/orders',orderRouter);
 app.use('/api/auth',AuthRouter);
 

@@ -12,10 +12,10 @@ import verifyAccessToken from '../middlewares/auth.js';
 
 const router = express.Router();
 
-router.post('/add',verifyAccessToken, addToCart);
-router.get("/items", verifyAccessToken, getCartItems);
-router.put('/update/:productId',verifyAccessToken ,updateCartItem);
-router.delete('/remove/:productId',verifyAccessToken, removeCartItem);
-router.put('/clear',verifyAccessToken, clearCart);
+router.post('/add', addToCart);
+router.get("/items", getCartItems);
+router.put('/update/:productId' ,updateCartItem);
+router.delete('/remove/:productId', removeCartItem);
+router.put('/clear', clearCart);
 
 export default router;
