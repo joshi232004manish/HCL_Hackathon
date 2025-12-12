@@ -89,10 +89,11 @@ This module ensures:
 
 Additional contributors may append their modules and names below as the project expands.
 
-Developed By Abhijeet Raj
+# 🛒 E-Commerce Frontend – React
+### Developed by: **Manish Joshi**
+
 A sleek, modern e-commerce application built with React and Vite, featuring a complete shopping experience with product catalog, cart management, user authentication, and responsive design.
-
-
+---
 ## 🚀 Features
 
 ### Core Functionality
@@ -289,20 +290,6 @@ The production build will be optimized and minified, ready for deployment to any
 - User authentication uses localStorage for persistence (suitable for demo purposes)
 - Product data is currently static (can be easily replaced with API integration)
 - Cart state persists during the session but resets on page refresh (can be enhanced with localStorage)
-
-## 🔮 Future Enhancements
-
-Potential improvements for the application:
-- Backend API integration
-- Payment processing
-- Order history and tracking
-- Product search functionality
-- Advanced filtering and sorting
-- Wishlist functionality
-- Product reviews and ratings system
-- Admin dashboard
-- Email notifications
-- Social media integration
 
 ## 📄 License
 
