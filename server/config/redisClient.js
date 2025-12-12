@@ -1,4 +1,7 @@
-/*import { Redis } from "@upstash/redis";
+
+
+
+import { Redis } from "@upstash/redis";
 
 // Provide a graceful in-memory fallback when Upstash credentials are missing.
 const hasUpstashCreds =
@@ -24,10 +27,9 @@ if (hasUpstashCreds) {
   
 
   console.warn(
-    "⚠ UPSTASH_REDIS_REST_URL/TOKEN not set. Using in-memory Redis shim."
+    "⚠️ UPSTASH_REDIS_REST_URL/TOKEN not set. Using in-memory Redis shim."
   );
 }
 
 export { redis };
 export default redis;
-*/
