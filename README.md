@@ -305,4 +305,5 @@ This is a private project. For questions or suggestions, please contact the proj
 ---
 
 **Built with ❤️ using React and Vite**
+---
 
