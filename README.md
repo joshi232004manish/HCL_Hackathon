@@ -1,6 +1,7 @@
-# 🛒 E-Commerce Backend – Auth & Order Module
+# 🛒 E-Commerce Backend – Auth & Order Module  
+### Developed by: **Manish Joshi**
 
-This backend provides secure authentication using **Access + Refresh Tokens** and a fully ACID-compliant **order management system** with **MongoDB transactions** to handle stock reservation, payment verification, and rollback on payment failures.
+This section of the backend includes the **Authentication** system and the **Order Management Module**, implemented using secure token-based authentication and MongoDB ACID transactions.
 
 ---
 
@@ -10,47 +11,46 @@ This backend provides secure authentication using **Access + Refresh Tokens** an
 - Signup with **email OTP verification**
 - Login with **password or Google OAuth**
 - **Access/Refresh Token flow**  
-  - Access Token: 15 min  
+  - Access Token: 15 minutes  
   - Refresh Token: 7 days  
 - Auto token refresh via `/refresh-token`
 - Secure **HttpOnly cookies**
-- Logout + profile retrieval
+- Logout + user profile API
 
 ---
 
 ## 🛍️ Order Module (MongoDB Transactions)
 
-### 1️⃣ Create Order (Stock Reservation)
-When user starts checkout:
-- Transaction begins
-- Stock is **decremented**
-- `locked` stock is **incremented**
-- A new **Pending order** is created
-- If Razorpay order creation fails → stock is restored (compensating transaction)
+### 1️⃣ Create Order – Stock Reservation
+Inside a MongoDB transaction:
+- Decrease product **stock**
+- Increase **locked** stock
+- Create a **Pending** order
+- If Razorpay order creation fails → **stock is restored**
 
-### 2️⃣ Place Order (Payment Success)
-- Razorpay signature is verified
+### 2️⃣ Place Order – Payment Success
+- Razorpay signature verification
 - Transaction updates:
-  - `locked` stock → decreases
+  - `locked` stock → decreased
   - Order status → **Paid**
-  - Cart is deleted
-- Ensures atomicity across documents
+  - Payment info saved
+  - User cart deleted
 
-### 3️⃣ Failed Payment – Release Locked Stock
-- Transaction restores:
-  - Stock → increment
-  - Locked stock → decrement
-- Order marked as *Payment Failed*
+### 3️⃣ Release Locked Stock – Payment Failure
+If payment fails:
+- Restore normal stock
+- Reduce locked stock
+- Update order status → *Payment Failed*
 
 ---
 
-## ⚙️ Why Use Transactions?
-Because operations touch **multiple collections** (Product, Order, Cart), transactions guarantee:
+## ⚙️ Why MongoDB Transactions?
+These operations span multiple documents (Product, Order, Cart), so transactions ensure:
 
 - No overselling  
 - Atomic stock reservation  
 - Consistent order states  
-- Safe rollback on payment issues  
+- Automatic rollback during failure  
 
 ---
 
@@ -65,10 +65,10 @@ Because operations touch **multiple collections** (Product, Order, Cart), transa
 - `POST /logout`
 
 ### Orders
-- `POST /order/create` – reserve stock + create Razorpay order  
+- `POST /order/create` – reserve stock + Razorpay order  
 - `POST /order/place` – confirm payment  
-- `POST /order/release` – restore stock on payment failure  
-- `GET /orders/me` – fetch user’s orders  
+- `POST /order/release` – refund stock  
+- `GET /orders/me` – list user orders  
 
 ---
 
@@ -81,11 +81,10 @@ Because operations touch **multiple collections** (Product, Order, Cart), transa
 ---
 
 ## 📄 Summary
-This backend ensures:
-- Secure user authentication  
-- Safe stock operations  
+This module ensures:
+- Secure user auth  
+- Reliable stock reservation  
 - Atomic and consistent order processing  
-- Full rollback mechanisms during payment failures  
+- Full rollback on payment failures  
 
-Perfect for scalable e-commerce applications.
-
+Additional contributors may append their modules and names below as the project expands.
