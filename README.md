@@ -307,3 +307,178 @@ This is a private project. For questions or suggestions, please contact the proj
 **Built with ❤️ using React and Vite**
 ---
 
+# 🛒 E-Commerce Full Stack App
+### Developed by: **Sagnik Halder**
+
+A full-featured backend-powered e-commerce platform with **product management**, **cart operations**, **address handling**, **image uploads**, **admin order control**, and fully structured **MongoDB schema models**.  
+
+This project provides a solid foundation for an e-commerce platform with all core backend functionality.
+
+---
+
+## 📦 Features
+
+### **1. Product Module**
+- Create, Read, Update, Delete products  
+- Cloudinary image upload with Multer  
+- Public & Admin routes  
+
+### **2. Cart Module**
+- Add, update, delete cart items  
+- Clear cart  
+- Fetch user cart  
+
+### **3. Address Module**
+- Save or update user address  
+- Fetch user address  
+
+### **4. Image Upload**
+- Upload single or multiple images using **Multer + Cloudinary**  
+
+### **5. Admin Order Management**
+- View all orders  
+- Update order status  
+- Supported statuses: `Pending`, `In Process`, `Out for Delivery`, `Delivered`, `Cancelled`  
+
+### **6. Schema Models**
+- User  
+- OTP  
+- Product  
+- Cart  
+- Address  
+- Order  
+
+---
+
+## 📡 API Endpoints
+
+### **Product Endpoints** (`/api/product`)
+#### Public
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/product/get` | Get all products |
+| GET | `/api/product/get/:id` | Get single product |
+
+#### Admin Only
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/product/create` | Create new product (Admin) |
+| PUT | `/api/product/update/admin/:id` | Update product (Admin) |
+| DELETE | `/api/product/delete/admin/:id` | Delete product (Admin) |
+| POST | `/api/product/upload` | Upload product images (Multer + Cloudinary) |
+
+---
+
+### **Cart Endpoints** (`/api/cart`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/cart/add` | Add product to cart |
+| GET | `/api/cart/items` | Get all cart items |
+| PUT | `/api/cart/update/:productId` | Update cart item quantity |
+| DELETE | `/api/cart/remove/:productId` | Remove item from cart |
+| PUT | `/api/cart/clear` | Clear all items in cart |
+
+---
+
+### **Address Endpoints** (`/api`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/update/address` | Save or update user address |
+| GET | `/api/my/address` | Get user saved address |
+
+---
+
+### **Admin Order Management Endpoints** (`/api.admin`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api.admin/order` | Get all orders (Admin) |
+| PUT | `/api.admin/status/:orderId` | Update order status |
+
+Supported statuses: `Pending`, `In Process`, `Out for Delivery`, `Delivered`, `Cancelled`
+
+---
+
+### **Optional User Order Endpoints**
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/order/create` | Place order from cart |
+| GET | `/api/order/myorders` | Get all orders for logged-in user |
+
+---
+
+### **Auth / OTP Endpoints** (Not implemented yet)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/signup` | User signup |
+| POST | `/api/auth/login` | User login |
+| POST | `/api/auth/send-otp` | Send OTP email |
+| POST | `/api/auth/verify-otp` | Verify OTP |
+
+---
+
+## 🛠️ Tech Stack
+- **Node.js + Express.js**  
+- **MongoDB + Mongoose**  
+- **Multer + Cloudinary** for image uploads  
+- **JavaScript (ES6+)**  
+- **RESTful API design**  
+
+---
+
+/src
+│── models/
+│ ├── usermodel.js
+│ ├── otpmodel.js
+│ ├── productmodel.js
+│ ├── cartmodel.js
+│ ├── addressmodel.js
+│ └── ordermodel.js
+│
+│── routes/
+│ ├── product.routes.js
+│ ├── cart.route.js
+│ ├── address.route.js
+│ ├── auth.route.js
+│ ├── adminorder.route.js
+│ └── order.routes.js
+|
+│
+│── controllers/
+│ ├── product.controller.js
+│ ├── cart.controller.js
+│ ├── address.controller.js
+│ ├── auth.controller.js
+│ ├── adminorder.controller.js
+│ └── order.controller.js
+|
+|
+│── middlewares/
+│ ├── auth.js
+│ └── multer.js
+|
+|
+│── config/
+│ ├── cloudinary.js
+│ └── redisClient.js
+|
+|
+│── utils/
+| └── sendEmail.js
+|
+│── index.js
+
+
+
+## 📄 Summary
+
+This backend project provides:
+
+- **Full product management** with image uploads  
+- **Cart functionality** with add/update/delete operations  
+- **Address handling** for users  
+- **Admin order control** with status updates  
+- **Well-structured MongoDB schema models**  
+- **Modular, scalable, and RESTful design**
+
+
+
